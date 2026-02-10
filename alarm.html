@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>闹钟提醒 - 任务管理助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #faf6f1 0%, #f4ede3 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        html, body, #root {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: linear-gradient(135deg, #6f4e25 0%, #9d6b3d 100%);
+            color: white;
+            padding: 16px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-icon {
+            font-size: 24px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .header-stats {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-top: 120px;
+            padding-bottom: 40px;
+        }
+
+        /* 标题和按钮 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .top-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #6f4e25;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6f4e25 0%, #9d6b3d 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a3e1f 0%, #8a5a30 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(111, 78, 37, 0.3);
+        }
+
+        /* 卡片容器 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e8dcc7;
+            overflow: hidden;
+        }
+
+        /* 标签栏 */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e8dcc7;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #999;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #6f4e25;
+            border-bottom-color: #6f4e25;
+        }
+
+        .tab:hover {
+            background: #fafafa;
+        }
+
+        /* 任务列表 */
+        .task-list {
+            padding: 24px;
+        }
+
+        .task-card {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .task-card.alarm {
+            border: 2px solid #e53935;
+        }
+
+        .task-card.completed {
+            background: #f5f5f5;
+            opacity: 0.7;
+        }
+
+        .task-checkbox {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            border: 2px solid #9d6b3d;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+
+        .task-checkbox:checked {
+            background: #6f4e25;
+            border-color: #6f4e25;
+        }
+
+        .task-checkbox:checked::after {
+            content: "✓";
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .task-completed .task-title {
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .task-description {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .task-completed .task-description {
+            text-decoration: line-through;
+        }
+
+        .task-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .chip-date {
+            background: rgba(157, 107, 61, 0.1);
+            color: #6f4e25;
+        }
+
+        .chip-date.overdue {
+            background: rgba(229, 57, 53, 0.1);
+            color: #e53935;
+        }
+
+        .chip-high {
+            background: rgba(229, 57, 53, 0.1);
+            color: #e53935;
+        }
+
+        .chip-medium {
+            background: rgba(255, 152, 0, 0.1);
+            color: #f57c00;
+        }
+
+        .chip-low {
+            background: rgba(56, 142, 60, 0.1);
+            color: #388e3c;
+        }
+
+        .chip-repeat {
+            border: 1px solid #999;
+            color: #666;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .task-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            background: transparent;
+        }
+
+        .task-btn-alarm {
+            color: #999;
+        }
+
+        .task-btn-alarm.active {
+            color: #e53935;
+            background: rgba(229, 57, 53, 0.1);
+        }
+
+        .task-btn-delete {
+            color: #999;
+        }
+
+        .task-btn-delete:hover {
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 64px 20px;
+        }
+
+        .empty-state h3 {
+            color: #999;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: #ccc;
+            font-size: 13px;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #6f4e25;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #9d6b3d;
+            box-shadow: 0 0 0 3px rgba(157, 107, 61, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+            color: #666;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-submit {
+            flex: 1;
+            padding: 10px;
+            background: linear-gradient(135deg, #6f4e25 0%, #9d6b3d 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(111, 78, 37, 0.3);
+        }
+
+        /* 提醒通知 */
+        .alarm-notification {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe082 100%);
+            color: #856404;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 2px solid #ffc107;
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .alarm-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .alarm-message {
+            font-size: 14px;
+        }
+
+        /* 提示框 */
+        .tips {
+            margin-top: 24px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+                padding-top: 100px;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .form-row .form-group {
+                margin-bottom: 16px;
+            }
+
+            .task-card {
+                flex-direction: column;
+            }
+
+            .task-actions {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="header">
+        <div class="header-left">
+            <div class="header-icon">⏰</div>
+            <div class="header-title">闹钟提醒</div>
+        </div>
+        <div class="header-stats" id="stats">0 / 0 · 0%</div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 顶部标题和按钮 -->
+        <div class="top-bar">
+            <div class="top-title">管理你的任务</div>
+            <button class="btn-primary" onclick="openModal()">✨ 新增任务</button>
+        </div>
+
+        <!-- 任务卡片 -->
+        <div class="card">
+            <!-- 标签栏 -->
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('all')">全部任务</div>
+                <div class="tab" onclick="switchTab('active')">待处理</div>
+                <div class="tab" onclick="switchTab('completed')">已完成</div>
+            </div>
+
+            <!-- 任务列表 -->
+            <div class="task-list" id="taskList">
+                <div class="empty-state">
+                    <h3>还没有创建任务，开始添加吧！</h3>
+                    <p>点击"新增任务"按钮来创建你的第一个任务</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提示 -->
+        <div class="tips">
+            💡 <strong>提示：</strong>当任务时间到达或即将到达时，你会收到提醒通知。<br>
+            点击任务卡片上的铃铛图标可以手动触发提醒。
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title">创建新任务</div>
+
+            <div class="form-group">
+                <label>任务标题 *</label>
+                <input type="text" id="title" placeholder="输入任务标题">
+            </div>
+
+            <div class="form-group">
+                <label>任务描述</label>
+                <textarea id="description" placeholder="输入任务描述（可选）" rows="3"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>截止日期</label>
+                    <input type="date" id="dueDate">
+                </div>
+                <div class="form-group">
+                    <label>时间</label>
+                    <input type="time" id="dueTime">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>优先级</label>
+                <select id="priority">
+                    <option value="high">高</option>
+                    <option value="medium" selected>中</option>
+                    <option value="low">低</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>重复类型</label>
+                <select id="repeatType">
+                    <option value="never" selected>不重复</option>
+                    <option value="daily">每天</option>
+                    <option value="weekly">每周</option>
+                </select>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-submit" onclick="addTask()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提醒通知 -->
+    <div class="alarm-notification" id="alarmNotification" style="display: none;">
+        <div class="alarm-title">🔔 任务提醒：<span id="alarmTitle"></span></div>
+        <div class="alarm-message">任务时间已到，请及时处理！</div>
+    </div>
+
+    <script>
+        // 数据存储
+        let tasks = JSON.parse(localStorage.getItem('alarm_tasks')) || [];
+        let currentFilter = 'all';
+        let alarmTimeoutId = null;
+
+        // 初始化
+        function init() {
+            setDefaultDate();
+            renderTasks();
+            startAlarmCheck();
+        }
+
+        // 设置默认日期
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dueDate').value = today;
+            document.getElementById('dueTime').value = '09:00';
+        }
+
+        // 打开模态框
+        function openModal() {
+            document.getElementById('modal').classList.add('open');
+            document.getElementById('title').focus();
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('modal').classList.remove('open');
+            clearForm();
+        }
+
+        // 清空表单
+        function clearForm() {
+            document.getElementById('title').value = '';
+            document.getElementById('description').value = '';
+            setDefaultDate();
+            document.getElementById('priority').value = 'medium';
+            document.getElementById('repeatType').value = 'never';
+        }
+
+        // 添加任务
+        function addTask() {
+            const title = document.getElementById('title').value.trim();
+            if (!title) {
+                alert('请输入任务标题');
+                return;
+            }
+
+            const task = {
+                id: `task_${Date.now()}`,
+                title: title,
+                description: document.getElementById('description').value,
+                dueDate: document.getElementById('dueDate').value,
+                dueTime: document.getElementById('dueTime').value,
+                priority: document.getElementById('priority').value,
+                repeatType: document.getElementById('repeatType').value,
+                completed: false,
+                alarmTriggered: false
+            };
+
+            tasks.unshift(task);
+            saveTasks();
+            renderTasks();
+            closeModal();
+        }
+
+        // 切换任务完成状态
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                task.alarmTriggered = false;
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // 删除任务
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+            renderTasks();
+        }
+
+        // 切换任务提醒
+        function toggleAlarm(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.alarmTriggered = !task.alarmTriggered;
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // 切换标签
+        function switchTab(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderTasks();
+        }
+
+        // 渲染任务列表
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+
+            // 过滤任务
+            let filteredTasks = tasks;
+            if (currentFilter === 'active') {
+                filteredTasks = tasks.filter(t => !t.completed);
+            } else if (currentFilter === 'completed') {
+                filteredTasks = tasks.filter(t => t.completed);
+            }
+
+            // 排序任务
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            filteredTasks.sort((a, b) => {
+                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+                if (priorityDiff !== 0) return priorityDiff;
+
+                const aDateTime = new Date(`${a.dueDate}T${a.dueTime}`).getTime();
+                const bDateTime = new Date(`${b.dueDate}T${b.dueTime}`).getTime();
+                return aDateTime - bDateTime;
+            });
+
+            // 渲染
+            if (filteredTasks.length === 0) {
+                let message = '';
+                if (currentFilter === 'completed') message = '还没有已完成的任务';
+                else if (currentFilter === 'active') message = '太棒了！没有待处理的任务';
+                else message = '还没有创建任务，开始添加吧！';
+
+                taskList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>${message}</h3>
+                        ${currentFilter === 'all' ? '<p>点击"新增任务"按钮来创建你的第一个任务</p>' : ''}
+                    </div>
+                `;
+            } else {
+                taskList.innerHTML = filteredTasks.map(task => {
+                    const now = new Date();
+                    const taskDateTime = new Date(`${task.dueDate}T${task.dueTime}`);
+                    const isOverdue = taskDateTime < now && !task.completed;
+
+                    const priorityLabel = { high: '高优先', medium: '中优先', low: '低优先' }[task.priority];
+                    const repeatLabel = { daily: '每天', weekly: '每周' }[task.repeatType];
+
+                    return `
+                        <div class="task-card ${task.alarmTriggered ? 'alarm' : ''} ${task.completed ? 'completed' : ''}">
+                            <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')">
+                            <div class="task-content">
+                                <div class="task-title">${escapeHtml(task.title)}</div>
+                                ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
+                                <div class="task-chips">
+                                    <span class="chip chip-date ${isOverdue ? 'overdue' : ''}">${task.dueDate} ${task.dueTime}</span>
+                                    <span class="chip chip-${task.priority}">${priorityLabel}</span>
+                                    ${task.repeatType !== 'never' ? `<span class="chip chip-repeat">${repeatLabel}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="task-actions">
+                                <button class="task-btn task-btn-alarm ${task.alarmTriggered ? 'active' : ''}" onclick="toggleAlarm('${task.id}')" title="设置提醒">🔔</button>
+                                <button class="task-btn task-btn-delete" onclick="deleteTask('${task.id}')" title="删除任务">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateStats();
+        }
+
+        // 更新统计信息
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.completed).length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            document.getElementById('stats').textContent = `${completed} / ${total} · ${rate}%`;
+        }
+
+        // 保存任务
+        function saveTasks() {
+            localStorage.setItem('alarm_tasks', JSON.stringify(tasks));
+        }
+
+        // 启动闹钟检查
+        function startAlarmCheck() {
+            setInterval(() => {
+                const now = new Date();
+                tasks.forEach(task => {
+                    if (task.completed || task.alarmTriggered) return;
+
+                    const taskDateTime = new Date(`${task.dueDate}T${task.dueTime}`);
+                    const timeDiff = taskDateTime.getTime() - now.getTime();
+
+                    // 在任务时间前5分钟或时间到达时触发提醒
+                    if ((timeDiff > 0 && timeDiff <= 300000) || (timeDiff < 0 && timeDiff > -60000)) {
+                        triggerAlarm(task);
+                    }
+                });
+            }, 30000); // 每30秒检查一次
+        }
+
+        // 触发提醒
+        function triggerAlarm(task) {
+            task.alarmTriggered = true;
+            saveTasks();
+            renderTasks();
+
+            // 显示通知
+            const notification = document.getElementById('alarmNotification');
+            document.getElementById('alarmTitle').textContent = task.title;
+            notification.style.display = 'block';
+
+            // 播放声音
+            playSound();
+
+            // 5秒后隐藏
+            if (alarmTimeoutId) clearTimeout(alarmTimeoutId);
+            alarmTimeoutId = setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        // 播放声音
+        function playSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('无法播放声音');
+            }
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面卸载时关闭模态框
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('modal');
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
